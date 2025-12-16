@@ -1,21 +1,29 @@
 """
-日志配置文件
-为医疗QA聊天机器人项目提供统一的日志系统
+日志配置模块
+作者：zjy
+创建时间：2024年
+
+该模块为医疗QA聊天机器人项目提供统一的日志系统。
+支持控制台和文件双重输出，包含不同级别的日志记录和格式化输出。
 """
+
 import logging
 import sys
 from datetime import datetime
+
 
 def setup_logger(name: str, level: str = 'INFO') -> logging.Logger:
     """
     设置日志配置
 
+    创建一个配置好的日志记录器，支持控制台和文件输出。
+
     Args:
-        name: 日志记录器名称
-        level: 日志级别 (DEBUG, INFO, WARNING, ERROR)
+        name (str): 日志记录器名称
+        level (str): 日志级别 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 
     Returns:
-        配置好的日志记录器
+        logging.Logger: 配置好的日志记录器
     """
     # 创建日志记录器
     logger = logging.getLogger(name)
@@ -33,7 +41,7 @@ def setup_logger(name: str, level: str = 'INFO') -> logging.Logger:
 
     # 控制台处理器
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.DEBUG)  # ✅ 允许DEBUG级别日志输出
+    console_handler.setLevel(logging.DEBUG)  # 允许DEBUG级别日志输出
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
@@ -45,6 +53,7 @@ def setup_logger(name: str, level: str = 'INFO') -> logging.Logger:
     logger.addHandler(file_handler)
 
     return logger
+
 
 # 创建主要模块的日志记录器
 logger_agent = setup_logger('Agent', 'DEBUG')

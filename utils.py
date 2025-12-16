@@ -1,46 +1,70 @@
-from langchain_openai import ChatOpenAI
-from config import *
-from py2neo import Graph
-from langchain_huggingface import HuggingFaceEmbeddings
-import torch
+"""
+工具函数模块
+作者：zjy
+创建时间：2024年
+
+该模块提供医疗问诊系统的核心工具函数，包括：
+1. 嵌入模型初始化和配置
+2. LLM模型获取和配置
+3. 结构化输出解析
+4. 字符串模板替换
+5. Neo4j图数据库连接
+
+所有工具函数都集成了日志记录功能，便于调试和监控。
+"""
 
 import os
+import torch
 from dotenv import load_dotenv
-load_dotenv()
 
-import os
-import torch
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_openai import ChatOpenAI
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings as CommunityHuggingFaceEmbeddings
+from py2neo import Graph
 from logger_config import logger_utils
 
+# 加载环境变量
+load_dotenv()
 
-def get_embeddings_model():
-    logger_utils.debug("get_embeddings_model() - 开始初始化嵌入模型")
 
-    # 1. 检查 GPU 是否可用
+def get_embeddings_model() -> HuggingFaceEmbeddings:
+    """
+    初始化嵌入模型
+
+    根据GPU可用性自动选择设备，并配置批处理大小等参数。
+    使用BGE基础模型进行文本嵌入。
+
+    Returns:
+        HuggingFaceEmbeddings: 初始化好的嵌入模型
+
+    Raises:
+        Exception: 当模型初始化失败时抛出异常
+    """
+    logger_utils.debug("开始初始化嵌入模型")
+
+    # 1. 检查GPU是否可用
     is_cuda_available = torch.cuda.is_available()
     device = "cuda" if is_cuda_available else "cpu"
-    logger_utils.info(f"get_embeddings_model() - 设备选择: {device}")
+    logger_utils.info(f"设备选择: {device}")
 
-    # 2. 模型配置（移除 dtype，仅保留 device 和 trust_remote_code）
+    # 2. 模型配置参数
     model_kwargs = {
-        "device": device,  # 指定运行设备（GPU/CPU）
+        "device": device,
         "trust_remote_code": True
     }
-    logger_utils.debug(f"get_embeddings_model() - 模型参数: {model_kwargs}")
+    logger_utils.debug(f"模型参数: {model_kwargs}")
 
-    # 3. 编码配置（批量大小根据设备调整）
+    # 3. 编码配置参数
     encode_kwargs = {
-        "normalize_embeddings": True,  # 必须开启，保证检索精度
-        "batch_size": 600 if is_cuda_available else 200,  # 8GB GPU 推荐 600
-        "device": device  # 关键：在编码时指定设备（解决 dtype 问题的核心）
+        "normalize_embeddings": True,  # 归一化嵌入，保证检索精度
+        "batch_size": 600 if is_cuda_available else 200,  # GPU: 600, CPU: 200
+        "device": device
     }
-    logger_utils.debug(f"get_embeddings_model() - 编码参数: {encode_kwargs}")
+    logger_utils.debug(f"编码参数: {encode_kwargs}")
 
-    # 4. 加载模型（通过 HuggingFaceEmbeddings 封装）
-    # model_path = os.getenv('EMBEDDING_MODEL_PATH')
+    # 4. 模型路径
     model_path = 'C:/02-study/model/embeding/bge-base'
-    logger_utils.info(f"get_embeddings_model() - 模型路径: {model_path}")
+    logger_utils.info(f"模型路径: {model_path}")
 
     try:
         emb_model = HuggingFaceEmbeddings(
@@ -48,40 +72,47 @@ def get_embeddings_model():
             model_kwargs=model_kwargs,
             encode_kwargs=encode_kwargs
         )
-        logger_utils.info("get_embeddings_model() - 嵌入模型初始化成功")
+        logger_utils.info("嵌入模型初始化成功")
         return emb_model
     except Exception as e:
-        logger_utils.error(f"get_embeddings_model() - 嵌入模型初始化失败: {e}")
+        logger_utils.error(f"嵌入模型初始化失败: {e}")
         raise
-# todo
-def get_llm_model():
-    logger_utils.debug("get_llm_model() - 开始获取LLM模型")
+
+
+def get_llm_model() -> ChatOpenAI:
+    """
+    获取LLM模型实例
+
+    使用DeepSeek Chat模型作为LLM后端，配置温度和最大令牌数等参数。
+
+    Returns:
+        ChatOpenAI: 配置好的LLM模型实例
+
+    Raises:
+        Exception: 当模型获取失败时抛出异常
+    """
+    logger_utils.debug("开始获取LLM模型")
 
     model_map = {
         'openai': ChatOpenAI(
-            # model = os.getenv('OPENAI_LLM_MODEL','deepseek-chat'),
-            model = 'deepseek-chat',
+            model='deepseek-chat',
             openai_api_base='https://api.deepseek.com/v1',
             openai_api_key='sk-ec1c58c12e9a48c39be6b3e7e31d1d48',
-            # temperature = os.getenv('TEMPERATURE'),
-            temperature = 0.01,
-            # max_tokens = os .getenv('MAX_TOKEND')
-            max_tokens = 2048,
-            # 添加超时设置（可选）
+            temperature=0.01,
+            max_tokens=2048,
             request_timeout=30
         )
     }
-    # return  model_map.get(os.getenv('LLM_MODEL'))
 
     try:
         llm = model_map.get('openai')
-        logger_utils.info("get_llm_model() - LLM模型获取成功")
-        logger_utils.debug(f"get_llm_model() - 模型参数: temperature=0.01, max_tokens=2048")
+        logger_utils.info("LLM模型获取成功")
+        logger_utils.debug(f"模型参数: temperature=0.01, max_tokens=2048")
         return llm
     except Exception as e:
-        logger_utils.error(f"get_llm_model() - LLM模型获取失败: {e}")
+        logger_utils.error(f"LLM模型获取失败: {e}")
 
-        # 如果出现 Brotli 错误，给出详细提示
+        # Brotli错误诊断和解决建议
         error_msg = str(e).lower()
         if "brotli" in error_msg or "content-encoding" in error_msg:
             logger_utils.error("检测到 Brotli 压缩解码错误！")
@@ -93,9 +124,21 @@ def get_llm_model():
 
         raise
 
-def structured_output_parser(response_schemas):
-    logger_utils.debug("structured_output_parser() - 开始生成结构化输出提示词")
-    logger_utils.debug(f"structured_output_parser() - 响应模式数量: {len(response_schemas)}")
+
+def structured_output_parser(response_schemas) -> str:
+    """
+    生成结构化输出提示词
+
+    根据响应模式生成用于实体抽取的提示词模板。
+
+    Args:
+        response_schemas: 响应模式列表
+
+    Returns:
+        str: 生成的提示词文本
+    """
+    logger_utils.debug("开始生成结构化输出提示词")
+    logger_utils.debug(f"响应模式数量: {len(response_schemas)}")
 
     text = '''
     请从以下文本中，抽取出实体信息，并按json格式输出，json包含首尾的 "```json" 和 "```"。
@@ -104,33 +147,57 @@ def structured_output_parser(response_schemas):
     for schema in response_schemas:
         text += schema.name + ' 字段，表示：' + schema.description + '，类型为：' + schema.type + '\n'
 
-    logger_utils.debug(f"structured_output_parser() - 提示词长度: {len(text)} 字符")
+    logger_utils.debug(f"提示词长度: {len(text)} 字符")
     return text
 
 
-def replace_token_in_string(string, slots):
-    logger_utils.debug(f"replace_token_in_string() - 原始字符串长度: {len(string)}")
-    logger_utils.debug(f"replace_token_in_string() - 替换槽位数量: {len(slots)}")
+def replace_token_in_string(string: str, slots: list) -> str:
+    """
+    字符串模板替换
+
+    将字符串中的槽位占位符替换为实际值。
+
+    Args:
+        string (str): 原始字符串，包含%slot%格式的占位符
+        slots (list): 槽位列表，格式为[[key, value], ...]
+
+    Returns:
+        str: 替换后的字符串
+    """
+    logger_utils.debug(f"原始字符串长度: {len(string)}")
+    logger_utils.debug(f"替换槽位数量: {len(slots)}")
 
     for key, value in slots:
-        string = string.replace('%'+key+'%', value)
+        string = string.replace('%' + key + '%', value)
 
-    logger_utils.debug(f"replace_token_in_string() - 替换后字符串长度: {len(string)}")
+    logger_utils.debug(f"替换后字符串长度: {len(string)}")
     return string
 
-def get_neo4j_conn():
-    logger_utils.debug("get_neo4j_conn() - 开始连接Neo4j数据库")
+
+def get_neo4j_conn() -> Graph:
+    """
+    连接Neo4j图数据库
+
+    使用默认配置连接到本地Neo4j数据库实例。
+
+    Returns:
+        Graph: Neo4j图数据库连接对象
+
+    Raises:
+        Exception: 当数据库连接失败时抛出异常
+    """
+    logger_utils.debug("开始连接Neo4j数据库")
 
     try:
         uri = 'neo4j://127.0.0.1:7687'
         username = 'neo4j'
         password = '123456789'
 
-        logger_utils.debug(f"get_neo4j_conn() - 连接参数: uri={uri}, username={username}")
+        logger_utils.debug(f"连接参数: uri={uri}, username={username}")
 
         conn = Graph(uri, auth=(username, password))
-        logger_utils.info("get_neo4j_conn() - Neo4j连接成功")
+        logger_utils.info("Neo4j连接成功")
         return conn
     except Exception as e:
-        logger_utils.error(f"get_neo4j_conn() - Neo4j连接失败: {e}")
+        logger_utils.error(f"Neo4j连接失败: {e}")
         raise

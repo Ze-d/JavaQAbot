@@ -1,38 +1,73 @@
+"""
+测试数据生成模块
+作者：zjy
+创建时间：2024年
+
+该模块用于从向量数据库生成测试数据集，包含以下功能：
+1. 从Chroma向量数据库加载文档数据
+2. 使用K-Means聚类筛选代表性样本
+3. 基于LLM生成问答对
+4. 输出为CSV格式的测试集
+
+主要配置参数：
+- CHROMA_DB_DIR: 向量数据库路径
+- TESTSET_FILE: 输出测试集文件名
+- N_CLUSTERS: K-Means聚类数量
+- QUESTIONS_PER_DOC: 每个文档生成的问题数量
+"""
+
 import os
-import pandas as pd
+import warnings
+from typing import List
+
 import numpy as np
-import json
+import pandas as pd
 from langchain_chroma import Chroma
-from sklearn.cluster import KMeans
-from sklearn.metrics import pairwise_distances_argmin_min
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
+from sklearn.cluster import KMeans
+from sklearn.metrics import pairwise_distances_argmin_min
 
 from utils import get_llm_model, get_embeddings_model
 
-import warnings
-
+# 忽略警告信息
 warnings.filterwarnings('ignore')
+
 
 # ================= 配置区域 =================
 CHROMA_DB_DIR = './data/db'
 TESTSET_FILE = "auto_generated_testset.csv"
 N_CLUSTERS = 20
 QUESTIONS_PER_DOC = 1
+# =========================================
 
-
-# ===========================================
 
 class QAData(BaseModel):
+    """
+    问答数据结构模型
+
+    用于接收和验证LLM生成的问答对数据。
+    """
     question: str = Field(description="生成的测试问题")
     answer: str = Field(description="问题的标准答案")
     type: str = Field(description="问题类型: simple 或 reasoning")
 
 
 def main():
+    """
+    主函数：生成测试数据集
+
+    流程：
+    1. 初始化LLM和嵌入模型
+    2. 从Chroma数据库加载文档
+    3. 使用K-Means筛选代表性样本
+    4. 生成问答对
+    5. 保存为CSV文件
+    """
     print("🚀 启动兜底方案：直接使用 LLM 生成测试集 (含格式自适应修复)...")
 
+    # 初始化模型
     llm = get_llm_model()
     embedding_model = get_embeddings_model()
 
@@ -63,9 +98,10 @@ def main():
     else:
         target_indices = range(len(texts))
 
+    # 初始化解析器
     parser = JsonOutputParser(pydantic_object=QAData)
 
-    # 强化 Prompt，明确要求单一对象，但代码层依然做兼容
+    # 强化 Prompt，明确要求单一对象
     prompt = ChatPromptTemplate.from_messages([
         ("system", "你是一个 QA 数据集生成专家。请根据用户提供的文本，生成一个 JSON 对象。\n"
                    "JSON 必须包含 keys: 'question', 'answer', 'type'。\n"
@@ -89,23 +125,22 @@ def main():
                 "format_instructions": parser.get_format_instructions()
             })
 
-            # 🔴🔴🔴 关键修复：兼容列表和字典 🔴🔴🔴
+            # 兼容列表和字典
             data_item = response
 
-            # 1. 如果返回的是列表 [{}], 取第一个元素
+            # 如果返回的是列表 [{}], 取第一个元素
             if isinstance(response, list):
                 if len(response) > 0:
                     data_item = response[0]
                 else:
-                    # 空列表，跳过
                     continue
 
-            # 2. 如果此时 data_item 不是字典 (比如是字符串)，跳过
+            # 如果此时 data_item 不是字典，跳过
             if not isinstance(data_item, dict):
                 print(f"\n   ⚠️ 第 {i + 1} 条格式异常 (类型: {type(data_item)}), 跳过...")
                 continue
 
-            # 3. 容错取值 (防止大小写差异)
+            # 容错取值 (防止大小写差异)
             question = data_item.get('question') or data_item.get('Question')
             answer = data_item.get('answer') or data_item.get('Answer')
             q_type = data_item.get('type') or 'simple'
