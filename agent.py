@@ -1,10 +1,10 @@
 """
-医疗问诊智能体
+Java文档问答智能体
 作者：zjy
 创建时间：2024年
 
-该模块实现医疗问诊的核心智能体，负责协调多个工具（通用对话、向量检索、图数据库查询、网络搜索）
-来回答用户的医疗相关问题。支持多轮对话、证据追踪和上下文理解。
+该模块实现Java文档问答的核心智能体，负责协调多个工具（通用对话、向量检索、图数据库查询、网络搜索）
+来回答用户的Java技术问题。支持多轮对话、证据追踪和上下文理解。
 """
 
 import os
@@ -33,12 +33,12 @@ from logger_config import logger_agent
 
 class Agent:
     """
-    医疗问诊智能体
+    Java文档问答智能体
 
     集成多种工具和方法，包括：
     - 通用对话工具：处理日常问候和身份相关问题
     - 向量检索工具：基于知识库的语义检索
-    - 图谱工具：基于Neo4j图数据库的医疗知识查询
+    - 图谱工具：基于Neo4j图数据库的Java技术知识查询
     - 搜索工具：基于网络的实时搜索
 
     具备对话历史管理和证据追踪能力。
@@ -46,7 +46,7 @@ class Agent:
 
     def __init__(self):
         """
-        初始化医疗智能体
+        初始化Java智能体
 
         完成以下初始化任务：
         1. 加载LLM模型
@@ -54,7 +54,7 @@ class Agent:
         3. 构建工具列表
         4. 创建Agent实例
         """
-        logger_agent.debug("开始初始化医疗智能体")
+        logger_agent.debug("开始初始化Java智能体")
 
         # 1. 初始化LLM模型
         logger_agent.debug("初始化LLM模型")
@@ -97,7 +97,7 @@ class Agent:
             ],
             system_prompt=system_prompt,
         )
-        logger_agent.info("医疗智能体初始化完成")
+        logger_agent.info("Java智能体初始化完成")
 
 
     @staticmethod
@@ -149,7 +149,7 @@ class Agent:
             """
             通用对话工具
 
-            处理日常问候、身份介绍等非医疗专业问题。
+            处理日常问候、身份介绍等非Java技术专业问题。
             确保机器人正确介绍自己的身份和限制。
 
             Args:
@@ -167,7 +167,7 @@ class Agent:
             """
             向量检索工具
 
-            基于向量数据库的语义检索，主要用于药品说明书等结构化文档查询。
+            基于向量数据库的语义检索，主要用于Java技术文档查询。
             支持相似度搜索和相关性评分。
 
             Args:
@@ -185,7 +185,7 @@ class Agent:
             """
             图数据库查询工具
 
-            基于Neo4j图数据库的医疗知识查询，包括疾病、症状、药物等实体关系。
+            基于Neo4j图数据库的Java技术知识查询，包括类、框架、方法等实体关系。
             支持实体提取、模板匹配和Cypher查询。
 
             Args:
@@ -203,7 +203,7 @@ class Agent:
             """
             网络搜索工具
 
-            当其他工具无法提供答案时，使用网络搜索补充常识性回答。
+            当其他工具无法提供答案时，使用网络搜索补充Java技术常识。
             支持搜索结果摘要和相关性过滤。
 
             Args:
@@ -223,7 +223,7 @@ class Agent:
         """
         处理通用对话问题
 
-        使用通用提示词模板处理非医疗专业问题，如问候、自我介绍等。
+        使用通用提示词模板处理非Java技术专业问题，如问候、自我介绍等。
         确保机器人身份一致性和安全边界。
 
         Args:
@@ -262,7 +262,7 @@ class Agent:
         """
         向量检索功能
 
-        基于向量数据库进行语义检索，主要用于查询药品说明书等文档内容。
+        基于向量数据库进行语义检索，主要用于查询Java技术文档内容。
         包含相似度搜索、相关性过滤、证据保存和答案生成四个步骤。
 
         Args:
@@ -320,8 +320,8 @@ class Agent:
         """
         图数据库查询功能
 
-        基于Neo4j图数据库进行医疗知识查询，包含以下步骤：
-        1. 实体提取（NER）：从用户问题中提取疾病、症状、药物等实体
+        基于Neo4j图数据库进行Java技术知识查询，包含以下步骤：
+        1. 实体提取（NER）：从用户问题中提取类、接口、框架、方法等实体
         2. 模板匹配：根据提取的实体匹配对应的查询模板
         3. 相似度筛选：对匹配的模板进行语义相似度筛选
         4. 图查询：执行Cypher语句查询图数据库
@@ -341,15 +341,16 @@ class Agent:
         """
         logger_agent.debug(f"开始图数据库查询: {query}")
 
-        # 步骤1：定义医疗实体提取模型
-        class Medical(BaseModel):
-            """医疗实体提取模型"""
-            disease: List[str] = Field(default=[], description="疾病名称实体")
-            symptom: List[str] = Field(default=[], description="疾病症状实体")
-            drug: List[str] = Field(default=[], description="药物名称实体")
+        # 步骤1：定义Java技术实体提取模型
+        class JavaTech(BaseModel):
+            """Java技术实体提取模型"""
+            class_or_interface: List[str] = Field(default=[], description="Java类或接口实体")
+            framework: List[str] = Field(default=[], description="Java框架实体")
+            method: List[str] = Field(default=[], description="Java方法实体")
+            technology: List[str] = Field(default=[], description="Java技术实体")
 
         # 步骤2：配置结构化输出策略
-        response_schemas = ToolStrategy(Medical)
+        response_schemas = ToolStrategy(JavaTech)
         format_instructions = response_schemas
 
         # 步骤3：初始化输出解析器
@@ -442,11 +443,12 @@ class Agent:
         return self._extract_content(response)
 
 
+# todo：网络搜索功能失败
     def search_func(self, query: str) -> str:
         """
         网络搜索功能
 
-        当其他工具无法提供答案时，使用网络搜索补充常识性回答。
+        当其他工具无法提供答案时，使用网络搜索补充Java技术常识。
         包含搜索、结果处理和答案生成三个步骤。
 
         Args:
@@ -616,25 +618,25 @@ if __name__ == '__main__':
 
     # ===== 测试1：通用对话功能 =====
     # print(agent.query('你好'))
-    # print(agent.query('寻医问药网获得过哪些投资？'))
+    # print(agent.query('你叫什么名字？'))
 
     # ===== 测试2：Agent.query()方法（集成测试） =====
-    # print(agent.query('鼻炎和感冒是并发症吗？'))
-    # print(agent.query('鼻炎怎么治疗？'))
-    # print(agent.query('烧橙子可以治感冒吗？'))
+    # print(agent.query('Spring Boot和Spring有什么区别？'))
+    # print(agent.query('Java 8有哪些新特性？'))
+    # print(agent.query('如何快速搭建一个Spring Boot项目？'))
 
     # ===== 测试3：通用工具单独测试 =====
     # print(agent.generic_func('你好'))
-    # print(agent.generic_func('你叫什么名字？'))
+    # print(agent.generic_func('你是谁开发的？'))
 
     # ===== 测试4：向量检索工具单独测试 =====
-    # print(agent.retrival_func('介绍一下奥沙利铂注射液'))
-    # print(agent.retrival_func('寻医问药网的客服电话是多少？'))
+    # print(agent.retrival_func('介绍一下ArrayList的使用方法'))
+    # print(agent.retrival_func('Spring Boot的配置方法有哪些？'))
 
     # ===== 测试5：图谱工具单独测试 =====
-    # print(agent.graph_func('感冒和鼻炎是并发症吗？'))
-    # print(agent.graph_func('感冒一般是由什么引起的？'))
-    # print(agent.graph_func('感冒了现在咳嗽的厉害吃什么药好得快？可以吃阿莫西林吗？'))
+    # print(agent.graph_func('Spring Boot是什么？'))
+    # print(agent.graph_func('HashMap的底层原理是什么？'))
+    # print(agent.graph_func('MyBatis和Hibernate的区别是什么？'))
 
     # ===== 测试6：搜索工具单独测试 =====
-    # print(agent.search_func('微软是什么？'))
+    # print(agent.search_func('Java是什么？'))

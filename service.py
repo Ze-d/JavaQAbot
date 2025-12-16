@@ -1,9 +1,9 @@
 """
-医疗问诊服务层
+Java文档问答服务层
 作者：zjy
 创建时间：2024年
 
-该模块提供医疗问诊的核心业务逻辑服务，包括对话摘要生成和问题处理。
+该模块提供Java文档问答的核心业务逻辑服务，包括对话摘要生成和问题处理。
 作为应用层和智能体之间的中间层，负责协调各个功能模块。
 """
 
@@ -17,7 +17,7 @@ from logger_config import logger_service
 
 class Service:
     """
-    医疗问诊服务类
+    Java文档问答服务类
 
     负责协调Agent进行问题处理，并在需要时生成对话摘要。
     提供统一的接口给上层应用调用。
@@ -25,16 +25,16 @@ class Service:
 
     def __init__(self):
         """
-        初始化医疗服务层
+        初始化Java服务层
 
         创建Agent实例，建立服务层的核心组件。
         """
-        logger_service.debug("开始初始化医疗服务层")
+        logger_service.debug("开始初始化Java服务层")
 
         # 创建Agent实例，用于处理具体问题
         logger_service.debug("创建Agent实例")
         self.agent = Agent()
-        logger_service.info("医疗服务层初始化完成")
+        logger_service.info("Java服务层初始化完成")
 
     def get_summary_message(self, message: str, history: List[List[str]]) -> str:
         """
@@ -129,7 +129,7 @@ class Service:
 if __name__ == '__main__':
     """
     服务层测试入口
-    用于验证医疗服务层的核心功能
+    用于验证Java服务层的核心功能
     """
     service = Service()
 
@@ -137,12 +137,12 @@ if __name__ == '__main__':
     # print(service.answer('你好', []))
 
     # 测试2：单轮对话
-    # print(service.answer('得了鼻炎怎么办？', [
+    # print(service.answer('Spring Boot是什么？', [
     #     ['你好', '你好，有什么可以帮到您的吗？']
     # ]))
 
     # 测试3：多轮对话（验证摘要功能）
-    print(service.answer('大概多长时间能治好？', [
+    print(service.answer('如何使用？', [
         ['你好', '你好，有什么可以帮到您的吗？'],
-        ['得了鼻炎怎么办？', '可以考虑使用丙酸氟替卡松鼻喷雾剂、头孢克洛颗粒等药物进行治疗。'],
+        ['Spring Boot是什么？', 'Spring Boot是一个基于Spring框架的快速开发框架，简化了Spring应用的搭建和开发过程。'],
     ]))

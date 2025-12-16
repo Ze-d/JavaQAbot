@@ -1,9 +1,9 @@
 """
-医疗问诊机器人 Gradio 应用入口
+Java文档问答助手 Gradio 应用入口
 作者：zjy
 创建时间：2024年
 
-该模块提供基于Gradio的Web界面，用于医疗问诊机器人的用户交互。
+该模块提供基于Gradio的Web界面，用于Java文档问答助手的用户交互。
 支持实时对话、问题历史记录，并集成了日志记录系统。
 """
 
@@ -13,9 +13,9 @@ from service import Service
 from logger_config import logger_app
 
 
-def doctor_bot(message: str, history: List[List[str]]) -> str:
+def java_doc_bot(message: str, history: List[List[str]]) -> str:
     """
-    医疗问诊机器人核心处理函数
+    Java文档问答助手核心处理函数
 
     Args:
         message (str): 用户输入的问题文本
@@ -36,7 +36,7 @@ def doctor_bot(message: str, history: List[List[str]]) -> str:
         service = Service()
 
         # 处理用户问题
-        logger_app.info("开始处理医疗问题")
+        logger_app.info("开始处理用户问题")
         result = service.answer(message, history)
 
         logger_app.info("问题处理完成")
@@ -62,8 +62,8 @@ css = '''
 # 创建Gradio聊天界面
 demo = gr.ChatInterface(
     css=css,
-    fn=doctor_bot,
-    title='医疗问诊机器人',
+    fn=java_doc_bot,
+    title='Java文档问答助手',
     chatbot=gr.Chatbot(height=400, bubble_full_width=False),
     theme=gr.themes.Default(spacing_size='sm', radius_size='sm'),
     textbox=gr.Textbox(
@@ -72,13 +72,11 @@ demo = gr.ChatInterface(
         scale=7
     ),
     examples=[
-        '你好，你叫什么名字？',
-        '寻医问药网获得过哪些投资？',
-        '寻医问药网获的客服电话是多少？',
-        '鼻炎是一种什么病？',
-        '一般会有哪些症状？',
-        '吃什么药好得快？可以吃阿莫西林吗？',
-        '刀郎最近有什么新专辑？'
+        "Java 8有哪些新特性？",
+        "Spring Boot如何快速搭建一个Web应用？",
+        "MyBatis和Hibernate的区别是什么？",
+        "如何处理Java中的NullPointerException？",
+        "Java并发编程的最佳实践有哪些？"
     ],
     submit_btn=gr.Button('提交', variant='primary'),
     # clear_btn=gr.Button('清空记录'),
@@ -90,9 +88,9 @@ demo = gr.ChatInterface(
 if __name__ == '__main__':
     """
     应用程序入口点
-    启动Gradio Web服务，提供医疗问诊机器人功能
+    启动Gradio Web服务，提供Java文档问答助手功能
     """
-    logger_app.info("启动医疗问诊机器人应用")
+    logger_app.info("启动Java文档问答助手应用")
     logger_app.debug("Gradio界面配置: max_width=850px")
 
     try:

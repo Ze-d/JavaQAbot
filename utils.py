@@ -3,9 +3,9 @@
 作者：zjy
 创建时间：2024年
 
-该模块提供医疗问诊系统的核心工具函数，包括：
+该模块提供Java文档问答系统的核心工具函数，包括：
 1. 嵌入模型初始化和配置
-2. LLM模型获取和配置
+2. LLM模型获取和配置（含Brotli错误修复）
 3. 结构化输出解析
 4. 字符串模板替换
 5. Neo4j图数据库连接
@@ -84,6 +84,7 @@ def get_llm_model() -> ChatOpenAI:
     获取LLM模型实例
 
     使用DeepSeek Chat模型作为LLM后端，配置温度和最大令牌数等参数。
+    集成了禁用响应压缩的HTTP适配器，解决Brotli解码错误。
 
     Returns:
         ChatOpenAI: 配置好的LLM模型实例
@@ -93,21 +94,44 @@ def get_llm_model() -> ChatOpenAI:
     """
     logger_utils.debug("开始获取LLM模型")
 
-    model_map = {
-        'openai': ChatOpenAI(
+    try:
+        # 创建禁用压缩的 httpx 客户端（LangChain兼容）
+        import httpx
+
+        # 创建禁用压缩的传输器
+        class NoCompressionTransport(httpx.HTTPTransport):
+            """自定义HTTP传输器，禁用响应压缩"""
+
+            def handle_request(self, request):
+                # 设置请求头禁用压缩
+                request.headers.update({
+                    'Accept-Encoding': 'identity',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                })
+                return super().handle_request(request)
+
+        # 创建 httpx 客户端
+        http_client = httpx.Client(
+            transport=NoCompressionTransport(),
+            timeout=30.0,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        )
+
+        # 创建ChatOpenAI实例
+        llm = ChatOpenAI(
             model='deepseek-chat',
             openai_api_base='https://api.deepseek.com/v1',
             openai_api_key='sk-ec1c58c12e9a48c39be6b3e7e31d1d48',
             temperature=0.01,
             max_tokens=2048,
-            request_timeout=30
+            http_client=http_client  # 使用自定义httpx客户端
         )
-    }
 
-    try:
-        llm = model_map.get('openai')
         logger_utils.info("LLM模型获取成功")
         logger_utils.debug(f"模型参数: temperature=0.01, max_tokens=2048")
+        logger_utils.info("已启用Brotli错误修复方案（禁用响应压缩）")
         return llm
     except Exception as e:
         logger_utils.error(f"LLM模型获取失败: {e}")
@@ -118,7 +142,7 @@ def get_llm_model() -> ChatOpenAI:
             logger_utils.error("检测到 Brotli 压缩解码错误！")
             logger_utils.error("解决方案:")
             logger_utils.error("1. 更新 brotli 包: pip install --upgrade brotli")
-            logger_utils.error("2. 禁用响应压缩: 在环境中设置 DISABLE_COMPRESSION=true")
+            logger_utils.error("2. 禁用响应压缩（已应用此方案）")
             logger_utils.error("3. 检查网络连接和代理设置")
             logger_utils.error("4. 尝试重启服务")
 
