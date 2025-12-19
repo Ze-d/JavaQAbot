@@ -25,10 +25,10 @@ from langchain_chroma import Chroma
 from langchain_community.vectorstores import FAISS
 from pydantic import BaseModel, Field
 
-from utils import *
-from config import *
-from prompt import *
-from logger_config import logger_agent
+from src.utils.utils import *
+from src.core.config import *
+from src.prompts.prompt import *
+from src.utils.logger_config import logger_agent
 
 
 class Agent:
@@ -63,7 +63,7 @@ class Agent:
 
         # 2. 加载向量数据库
         logger_agent.debug("加载向量数据库")
-        db_path = os.path.join(os.path.dirname(__file__), './data/db')
+        db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '../resources/data/db')
         self.vdb = Chroma(
             persist_directory=db_path,
             embedding_function=get_embeddings_model()

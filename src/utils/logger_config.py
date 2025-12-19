@@ -3,7 +3,7 @@
 作者：zjy
 创建时间：2024年
 
-该模块为医疗QA聊天机器人项目提供统一的日志系统。
+该模块为Java文档问答系统提供统一的日志系统。
 支持控制台和文件双重输出，包含不同级别的日志记录和格式化输出。
 """
 
@@ -47,7 +47,16 @@ def setup_logger(name: str, level: str = 'INFO') -> logging.Logger:
 
     # 文件处理器
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    file_handler = logging.FileHandler(f'logs/medical_qa_{timestamp}.log', encoding='utf-8')
+
+    # 计算项目根目录下的日志路径
+    # 当前文件: src/utils/logger_config.py
+    # 项目根目录: 上级目录的上级目录
+    import os
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    log_dir = os.path.join(project_root, 'resources', 'logs')
+    os.makedirs(log_dir, exist_ok=True)  # 确保日志目录存在
+
+    file_handler = logging.FileHandler(f'{log_dir}/java_qa_{timestamp}.log', encoding='utf-8')
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)

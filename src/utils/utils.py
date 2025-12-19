@@ -21,7 +21,7 @@ from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.embeddings import HuggingFaceEmbeddings as CommunityHuggingFaceEmbeddings
 from py2neo import Graph
-from logger_config import logger_utils
+from .logger_config import logger_utils
 
 # 加载环境变量
 load_dotenv()
@@ -95,38 +95,69 @@ def get_llm_model() -> ChatOpenAI:
     logger_utils.debug("开始获取LLM模型")
 
     try:
-        # 创建禁用压缩的 httpx 客户端（LangChain兼容）
-        import httpx
+        # 方案1：尝试使用httpx禁用压缩
+        try:
+            import httpx
 
-        # 创建禁用压缩的传输器
-        class NoCompressionTransport(httpx.HTTPTransport):
-            """自定义HTTP传输器，禁用响应压缩"""
+            # 创建禁用压缩的传输器
+            class NoCompressionTransport(httpx.HTTPTransport):
+                """自定义HTTP传输器，强制禁用响应压缩"""
 
-            def handle_request(self, request):
-                # 设置请求头禁用压缩
-                request.headers.update({
+                def handle_request(self, request):
+                    # 强制设置禁用压缩的请求头
+                    request.headers.update({
+                        'Accept-Encoding': 'identity',
+                        'Connection': 'close',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    })
+                    return super().handle_request(request)
+
+            # 创建 httpx 客户端
+            http_client = httpx.Client(
+                transport=NoCompressionTransport(),
+                timeout=httpx.Timeout(30.0),
+                limits=httpx.Limits(max_keepalive_connections=0, max_connections=1),
+                headers={
                     'Accept-Encoding': 'identity',
+                    'Connection': 'close',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                })
-                return super().handle_request(request)
+                }
+            )
 
-        # 创建 httpx 客户端
-        http_client = httpx.Client(
-            transport=NoCompressionTransport(),
-            timeout=30.0,
-            headers={
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-        )
+            # 创建ChatOpenAI实例
+            llm = ChatOpenAI(
+                model='deepseek-chat',
+                openai_api_base='https://api.deepseek.com/v1',
+                openai_api_key='sk-ec1c58c12e9a48c39be6b3e7e31d1d48',
+                temperature=0.01,
+                max_tokens=2048,
+                http_client=http_client,
+                # 添加额外的禁用压缩参数
+                extra_headers={'Accept-Encoding': 'identity'}
+            )
 
-        # 创建ChatOpenAI实例
+            logger_utils.info("已启用强效Brotli错误修复方案（httpx方案）")
+            return llm
+
+        except ImportError:
+            logger_utils.warning("httpx不可用，尝试备用方案")
+
+        # 方案2：备用方案 - 使用环境变量和禁用压缩的设置
+        import os
+        os.environ['CURL_CA_BUNDLE'] = ''
+        os.environ['REQUESTS_CA_BUNDLE'] = ''
+
+        # 创建不使用自定义http_client的ChatOpenAI实例
         llm = ChatOpenAI(
             model='deepseek-chat',
             openai_api_base='https://api.deepseek.com/v1',
             openai_api_key='sk-ec1c58c12e9a48c39be6b3e7e31d1d48',
             temperature=0.01,
             max_tokens=2048,
-            http_client=http_client  # 使用自定义httpx客户端
+            # 禁用流式传输
+            streaming=False,
+            # 禁用超时重试（避免压缩问题）
+            max_retries=0
         )
 
         logger_utils.info("LLM模型获取成功")

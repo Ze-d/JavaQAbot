@@ -23,8 +23,8 @@ from langchain_community.document_loaders import CSVLoader, PyMuPDFLoader, TextL
 from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from utils import get_embeddings_model
-from logger_config import logger_data
+from .utils import get_embeddings_model
+from .logger_config import logger_data
 
 
 def doc2vec():

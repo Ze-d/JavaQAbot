@@ -8,11 +8,11 @@ Java文档问答服务层
 """
 
 from typing import List
-from prompt import *
-from utils import *
-from agent import *
+from src.prompts.prompt import *
+from src.utils.utils import *
+from src.core.agent import *
 from langchain_core.prompts import PromptTemplate
-from logger_config import logger_service
+from src.utils.logger_config import logger_service
 
 
 class Service:

@@ -1,0 +1,37 @@
+# Java文档问答系统依赖包
+# 生成时间：2024年
+
+# 核心框架
+gradio>=3.50.0
+langchain>=0.1.0
+langchain-openai>=0.0.8
+langchain-community>=0.0.10
+langchain-huggingface>=0.0.3
+langchain-chroma>=0.1.0
+
+# LLM和嵌入模型
+openai>=1.10.0
+httpx>=0.24.0
+torch>=2.0.0
+transformers>=4.30.0
+sentence-transformers>=2.2.0
+
+# 图数据库
+py2neo>=2021.2.0
+
+# 数据处理
+numpy>=1.24.0
+pandas>=2.0.0
+
+# 环境配置
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+
+# 测试工具
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# 开发工具
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.4.0

@@ -9,8 +9,8 @@ Java文档问答助手 Gradio 应用入口
 
 import gradio as gr
 from typing import List
-from service import Service
-from logger_config import logger_app
+from src.core.service import Service
+from src.utils.logger_config import logger_app
 
 
 def java_doc_bot(message: str, history: List[List[str]]) -> str:
