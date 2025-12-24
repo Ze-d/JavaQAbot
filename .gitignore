@@ -1,0 +1,11 @@
+.env
+.vscode/
+__pycache__/
+__pypackages__/
+.idea/
+.venv/
+.gradio
+data/
+logs/
+
+
