@@ -17,14 +17,19 @@
 """
 
 import os
+import sys
 from glob import glob
 
 from langchain_community.document_loaders import CSVLoader, PyMuPDFLoader, TextLoader
 from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from .utils import get_embeddings_model
-from .logger_config import logger_data
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
+
+from src.utils.utils import get_embeddings_model
+from src.utils.logger_config import setup_logger
+logger_data = setup_logger('DataProcess', 'INFO')
 
 
 def doc2vec():
@@ -57,14 +62,16 @@ def doc2vec():
         logger_data.debug("分割参数: chunk_size=500, overlap=80")
 
         # 2. 读取并分割文件
-        dir_path = os.path.join(os.path.dirname(__file__), './data/inputs/')
+        # 获取项目根目录：src/utils/ -> src/ -> 项目根目录
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        dir_path = os.path.join(project_root, 'resources', 'data', 'inputs')
         logger_data.info(f"输入目录: {dir_path}")
 
         documents = []
         file_count = 0
 
         # 遍历输入目录中的所有文件
-        for file_path in glob(dir_path + '*.*'):
+        for file_path in glob(os.path.join(dir_path, '*.*')):
             file_count += 1
             logger_data.debug(f"处理文件 {file_count}: {file_path}")
 
@@ -74,14 +81,19 @@ def doc2vec():
 
             # 根据文件类型选择加载器
             if '.csv' in file_path:
-                loader = CSVLoader(file_path, encoding='gb18030')
+                loader = CSVLoader(file_path, encoding='utf-8')
                 logger_data.debug("使用CSV加载器")
             if '.pdf' in file_path:
                 loader = PyMuPDFLoader(file_path)
                 logger_data.debug("使用PDF加载器")
             if '.txt' in file_path:
-                loader = TextLoader(file_path, encoding='gbk')
-                logger_data.debug("使用TXT加载器")
+                # 尝试UTF-8编码，如果失败则回退到gbk
+                try:
+                    loader = TextLoader(file_path, encoding='utf-8')
+                    logger_data.debug("使用TXT加载器 (UTF-8)")
+                except UnicodeDecodeError:
+                    loader = TextLoader(file_path, encoding='gbk')
+                    logger_data.debug("使用TXT加载器 (GBK)")
 
             # 如果找到了合适的加载器，进行文档加载和分割
             if loader:
@@ -94,10 +106,13 @@ def doc2vec():
         # 3. 向量化并存储
         if documents:
             logger_data.debug("开始向量化存储")
+            # 获取项目根目录
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            db_path = os.path.join(project_root, 'resources', 'data', 'db')
             vdb = Chroma.from_documents(
                 documents=documents,
                 embedding=get_embeddings_model(),
-                persist_directory=os.path.join(os.path.dirname(__file__), './data/db/')
+                persist_directory=db_path
             )
             logger_data.info("向量化存储完成")
         else:

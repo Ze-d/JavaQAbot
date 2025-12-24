@@ -62,11 +62,15 @@ def get_embeddings_model() -> HuggingFaceEmbeddings:
     }
     logger_utils.debug(f"编码参数: {encode_kwargs}")
 
-    # 4. 模型路径
-    model_path = 'C:/02-study/model/embeding/bge-base'
+    # 4. 模型路径（使用环境变量，带默认值）
+    model_path = os.getenv("MODEL_PATH", "C:/02-study/model/embedding/bge-base")
     logger_utils.info(f"模型路径: {model_path}")
 
     try:
+        # 检查模型路径是否存在
+        if not os.path.exists(model_path):
+            raise ValueError(f"嵌入模型路径不存在: {model_path}")
+
         emb_model = HuggingFaceEmbeddings(
             model_name=model_path,
             model_kwargs=model_kwargs,
@@ -125,10 +129,20 @@ def get_llm_model() -> ChatOpenAI:
             )
 
             # 创建ChatOpenAI实例
+            # 获取API配置，带默认值和错误处理
+            openai_api_base = os.getenv("OPENAI_API_BASE", "https://api.deepseek.com/v1")
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+
+            # 检查API密钥是否存在
+            if not openai_api_key:
+                raise ValueError("OPENAI_API_KEY环境变量未设置，请检查.env文件")
+
+            logger_utils.debug(f"使用API基础地址: {openai_api_base}")
+
             llm = ChatOpenAI(
                 model='deepseek-chat',
-                openai_api_base='https://api.deepseek.com/v1',
-                openai_api_key='sk-ec1c58c12e9a48c39be6b3e7e31d1d48',
+                openai_api_base=openai_api_base,
+                openai_api_key=openai_api_key,
                 temperature=0.01,
                 max_tokens=2048,
                 http_client=http_client,
@@ -143,15 +157,24 @@ def get_llm_model() -> ChatOpenAI:
             logger_utils.warning("httpx不可用，尝试备用方案")
 
         # 方案2：备用方案 - 使用环境变量和禁用压缩的设置
-        import os
         os.environ['CURL_CA_BUNDLE'] = ''
         os.environ['REQUESTS_CA_BUNDLE'] = ''
 
         # 创建不使用自定义http_client的ChatOpenAI实例
+        # 获取API配置，带默认值和错误处理
+        openai_api_base = os.getenv("OPENAI_API_BASE", "https://api.deepseek.com/v1")
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+
+        # 检查API密钥是否存在
+        if not openai_api_key:
+            raise ValueError("OPENAI_API_KEY环境变量未设置，请检查.env文件")
+
+        logger_utils.debug(f"使用API基础地址: {openai_api_base}")
+
         llm = ChatOpenAI(
             model='deepseek-chat',
-            openai_api_base='https://api.deepseek.com/v1',
-            openai_api_key='sk-ec1c58c12e9a48c39be6b3e7e31d1d48',
+            openai_api_base=openai_api_base,
+            openai_api_key=openai_api_key,
             temperature=0.01,
             max_tokens=2048,
             # 禁用流式传输
@@ -245,8 +268,12 @@ def get_neo4j_conn() -> Graph:
 
     try:
         uri = 'neo4j://127.0.0.1:7687'
-        username = 'neo4j'
-        password = '123456789'
+        username = os.getenv("NEO4J_USERNAME", "neo4j")
+        password = os.getenv("NEO4J_PASSWORD")
+
+        # 检查密码是否存在
+        if not password:
+            raise ValueError("NEO4J_PASSWORD环境变量未设置，请检查.env文件")
 
         logger_utils.debug(f"连接参数: uri={uri}, username={username}")
 

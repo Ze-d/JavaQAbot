@@ -66,8 +66,46 @@ RETRIVAL_PROMPT_TPL = '''
 # 命名实体识别提示词模板
 # 从用户问题中提取Java技术实体（类、接口、框架、方法）
 NER_PROMPT_TPL = '''
-1、从以下用户输入的句子中，提取Java技术实体内容。
-2、注意：根据用户输入的事实抽取内容，不要推理，不要补充信息。
+你是一个Java技术实体提取专家。请从用户输入中提取以下类型的Java技术实体：
+
+**提取实体类型及说明：**
+1. class_or_interface: Java类、接口、框架或技术名称（如：Spring Boot、ArrayList、Spring、Hibernate、MyBatis、Maven、Docker）
+2. method_name: Java方法名称（如：add、remove、getName）
+3. framework: 保留字段（不使用）
+4. technology: 保留字段（不使用）
+
+**提取规则：**
+- 只提取明确提到的技术名称，不要推理或补充
+- 如果某个字段没有相关内容，返回空数组[]
+- 实体名称要准确，不要包含多余的修饰词
+
+**示例：**
+输入："Spring Boot是什么？它的优点有哪些？"
+输出：
+{{
+  "class_or_interface": ["Spring Boot"],
+  "method_name": [],
+  "framework": [],
+  "technology": []
+}}
+
+输入："如何使用ArrayList的add方法？"
+输出：
+{{
+  "class_or_interface": ["ArrayList"],
+  "method_name": ["add"],
+  "framework": [],
+  "technology": []
+}}
+
+输入："Spring和Hibernate有什么区别？"
+输出：
+{{
+  "class_or_interface": ["Spring", "Hibernate"],
+  "method_name": [],
+  "framework": [],
+  "technology": []
+}}
 
 {format_instructions}
 ------------

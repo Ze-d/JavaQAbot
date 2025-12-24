@@ -346,7 +346,7 @@ class Agent:
             """Java技术实体提取模型"""
             class_or_interface: List[str] = Field(default=[], description="Java类或接口实体")
             framework: List[str] = Field(default=[], description="Java框架实体")
-            method: List[str] = Field(default=[], description="Java方法实体")
+            method_name: List[str] = Field(default=[], description="Java方法实体")
             technology: List[str] = Field(default=[], description="Java技术实体")
 
         # 步骤2：配置结构化输出策略
@@ -469,13 +469,51 @@ class Agent:
         # 步骤2：编码查询并构建搜索URL
         encoded_query = urllib.parse.quote(query)
         url = f"https://www.so.com/s?src=lm&ls=sm3020463&lm_extend=ctype:31&q={encoded_query}"
+
+        # 安全检查：验证URL域名
+        if not url.startswith('https://www.so.com/'):
+            logger_agent.error(f"不允许的域名: {url}")
+            return "网络搜索功能暂时不可用"
+
         logger_agent.debug(f"搜索URL: {url}")
 
-        # 步骤3：执行网络请求
-        response = requests.get(url)
-        response.raise_for_status()
-        search_result = response.text
-        logger_agent.debug(f"原始搜索结果长度: {len(search_result)}字符")
+        # 步骤3：执行网络请求（添加安全配置）
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'identity',  # 禁用压缩，避免Brotli问题
+                'Connection': 'close',
+                'Cache-Control': 'no-cache'
+            }
+
+            # 设置超时和会话
+            session = requests.Session()
+            session.headers.update(headers)
+
+            # 发送请求（超时10秒）
+            response = session.get(url, timeout=10, allow_redirects=True)
+            response.raise_for_status()
+
+            # 检查响应大小（限制最大10MB）
+            if len(response.content) > 10 * 1024 * 1024:
+                logger_agent.warning("搜索结果过大，进行截断处理")
+                search_result = response.text[:10000]  # 只取前10000字符
+            else:
+                search_result = response.text
+
+            logger_agent.debug(f"原始搜索结果长度: {len(search_result)}字符")
+
+        except requests.exceptions.Timeout:
+            logger_agent.error("网络请求超时")
+            return "网络搜索请求超时，请稍后重试"
+        except requests.exceptions.RequestException as e:
+            logger_agent.error(f"网络请求失败: {e}")
+            return "网络搜索服务暂时不可用"
+        except Exception as e:
+            logger_agent.error(f"搜索过程发生未知错误: {e}")
+            return "搜索功能发生错误，请稍后重试"
 
         # 步骤4：如果结果过长，进行摘要处理
         if len(search_result) > 3000:

@@ -65,10 +65,15 @@ def create_custom_llm() -> ChatOpenAI:
     })
 
     # 创建ChatOpenAI实例
+    # 使用环境变量，不使用硬编码密钥
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY环境变量未设置")
+
     llm = ChatOpenAI(
         model='deepseek-chat',
         openai_api_base='https://api.deepseek.com/v1',
-        openai_api_key=os.getenv('OPENAI_API_KEY', 'sk-ec1c58c12e9a48c39be6b3e7e31d1d48'),
+        openai_api_key=api_key,
         temperature=0.01,
         max_tokens=2048,
         # request_timeout=30  # 可选：设置超时时间
