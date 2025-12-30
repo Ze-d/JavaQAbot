@@ -268,7 +268,7 @@ def get_neo4j_conn() -> Graph:
 
     try:
         uri = 'neo4j://127.0.0.1:7687'
-        username = os.getenv("NEO4J_USERNAME", "neo4j")
+        username = os.getenv("NEO4J_USERNAME")
         password = os.getenv("NEO4J_PASSWORD")
 
         # 检查密码是否存在

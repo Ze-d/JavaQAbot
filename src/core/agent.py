@@ -22,13 +22,17 @@ from langchain.agents import create_agent
 from langchain.messages import HumanMessage, AIMessage
 from langchain.tools import tool
 from langchain_chroma import Chroma
-from langchain_community.vectorstores import FAISS
 from pydantic import BaseModel, Field
 
 from src.utils.utils import *
 from src.core.config import *
 from src.prompts.prompt import *
 from src.utils.logger_config import logger_agent
+
+# 性能优化组件
+from src.core.vector_db_manager import VectorDBManager
+from src.core.graph_cache import cached_cypher_query
+from src.core.faiss_index_manager import FaissIndexManager
 
 
 class Agent:
@@ -61,13 +65,10 @@ class Agent:
         self._llm = get_llm_model()
         logger_agent.info("LLM模型加载完成")
 
-        # 2. 加载向量数据库
+        # 2. 加载向量数据库（使用单例模式优化）
         logger_agent.debug("加载向量数据库")
         db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '../resources/data/db')
-        self.vdb = Chroma(
-            persist_directory=db_path,
-            embedding_function=get_embeddings_model()
-        )
+        self.vdb = VectorDBManager.get_instance(db_path).get_db()
         logger_agent.info(f"向量数据库加载完成: {db_path}")
 
         # 3. 初始化证据追踪列表
@@ -390,12 +391,13 @@ class Agent:
             logger_agent.debug("未找到匹配的查询模板")
             return '没有查到'
 
-        # 步骤7：将模板转换为文档并建立FAISS索引
+        # 步骤7：将模板转换为文档并建立FAISS索引（使用缓存优化）
         graph_documents = [
             Document(page_content=template['question'], metadata=template)
             for template in graph_templates
         ]
-        db = FAISS.from_documents(graph_documents, get_embeddings_model())
+        # 使用FaissIndexManager避免重复构建索引
+        db = FaissIndexManager.get_or_build_index(graph_documents)
         graph_documents_filter = db.similarity_search_with_relevance_scores(query, k=3)
         logger_agent.debug(f"相似度筛选后剩余 {len(graph_documents_filter)} 个模板")
 
@@ -412,8 +414,8 @@ class Agent:
             answer = document.metadata['answer']
 
             try:
-                # 执行Cypher查询
-                result = neo4j_conn.run(cypher).data()
+                # 执行Cypher查询（使用缓存优化）
+                result = cached_cypher_query(neo4j_conn, cypher)
 
                 # 检查查询结果是否有效
                 if result and any(value for value in result[0].values()):
